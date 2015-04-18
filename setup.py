@@ -32,7 +32,7 @@ setup(
     description=description if PY3 else description.encode('utf8'),
     long_description=long_description if PY3 else long_description.decode('utf8'),
 
-    install_requires=['Django>=1.7'],
+    install_requires=['Django>=1.7,<1.9'],
 
     classifiers=(
         'Development Status :: 4 - Beta',
