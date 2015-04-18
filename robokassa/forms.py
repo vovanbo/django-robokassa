@@ -1,10 +1,13 @@
-#coding: utf-8
+# coding: utf-8
 from __future__ import absolute_import, unicode_literals
 
+import sys
 from hashlib import md5
+
 from django import forms
 from django.utils import six
-from django.utils.six import PY3
+
+PY3 = sys.version_info >= (3, 0)
 
 if PY3:
     from urllib.parse import urlencode
@@ -17,17 +20,16 @@ from robokassa.models import SuccessNotification
 
 
 class BaseRobokassaForm(forms.Form):
-
     def __init__(self, *args, **kwargs):
         super(BaseRobokassaForm, self).__init__(*args, **kwargs)
         # создаем дополнительные поля
         for key in EXTRA_PARAMS:
-            self.fields['shp'+key] = forms.CharField(required=False)
+            self.fields['shp' + key] = forms.CharField(required=False)
             if 'initial' in kwargs:
-                self.fields['shp'+key].initial = kwargs['initial'].get(key, 'None')
+                self.fields['shp' + key].initial = kwargs['initial'].get(key, 'None')
 
     def _append_extra_part(self, standard_part, value_func):
-        extra_part = ":".join(["%s=%s" % ('shp'+key, value_func('shp' + key)) for key in EXTRA_PARAMS])
+        extra_part = ":".join(["%s=%s" % ('shp' + key, value_func('shp' + key)) for key in EXTRA_PARAMS])
         if extra_part:
             return ':'.join([standard_part, extra_part])
         return standard_part
@@ -35,8 +37,8 @@ class BaseRobokassaForm(forms.Form):
     def extra_params(self):
         extra = {}
         for param in EXTRA_PARAMS:
-            if ('shp'+param) in self.cleaned_data:
-                extra[param] = self.cleaned_data['shp'+param]
+            if ('shp' + param) in self.cleaned_data:
+                extra[param] = self.cleaned_data['shp' + param]
         return extra
 
     def _get_signature(self):
@@ -47,9 +49,8 @@ class BaseRobokassaForm(forms.Form):
 
 
 class RobokassaForm(BaseRobokassaForm):
-
     # login магазина в обменном пункте
-    MrchLogin = forms.CharField(max_length=20, initial = LOGIN)
+    MrchLogin = forms.CharField(max_length=20, initial=LOGIN)
 
     # требуемая к получению сумма
     OutSum = forms.DecimalField(min_value=0, max_digits=20, decimal_places=2, required=False)
@@ -64,7 +65,7 @@ class RobokassaForm(BaseRobokassaForm):
     SignatureValue = forms.CharField(max_length=32)
 
     # предлагаемая валюта платежа
-    IncCurrLabel = forms.CharField(max_length = 10, required=False)
+    IncCurrLabel = forms.CharField(max_length=10, required=False)
 
     # e-mail пользователя
     Email = forms.CharField(max_length=100, required=False)
@@ -86,13 +87,13 @@ class RobokassaForm(BaseRobokassaForm):
 
         self.fields['SignatureValue'].initial = self._get_signature()
 
-
     def get_redirect_url(self):
         """
         Получить URL с GET-параметрами, соответствующими значениям полей в
         форме. Редирект на адрес, возвращаемый этим методом, эквивалентен
         ручной отправке формы методом GET.
         """
+
         def _initial(name, field):
             val = self.initial.get(name, field.initial)
             if not val:
@@ -102,9 +103,9 @@ class RobokassaForm(BaseRobokassaForm):
         fields = [(name, _initial(name, field))
                   for name, field in list(self.fields.items())
                   if _initial(name, field)
-                 ]
+                  ]
         params = urlencode(fields)
-        return self.target+'?'+params
+        return self.target + '?' + params
 
     def _get_signature_string(self):
         def _val(name):
@@ -112,9 +113,9 @@ class RobokassaForm(BaseRobokassaForm):
             if value is None:
                 return ''
             return six.text_type(value)
+
         standard_part = ':'.join([_val('MrchLogin'), _val('OutSum'), _val('InvId'), PASSWORD1])
         return self._append_extra_part(standard_part, _val)
-
 
 
 class ResultURLForm(BaseRobokassaForm):
@@ -167,6 +168,7 @@ class SuccessRedirectForm(_RedirectPageForm):
             if not SuccessNotification.objects.filter(InvId=data['InvId']):
                 raise forms.ValidationError('От ROBOKASSA не было предварительного уведомления')
         return data
+
 
 class FailRedirectForm(BaseRobokassaForm):
     """
